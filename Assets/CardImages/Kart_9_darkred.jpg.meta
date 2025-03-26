@@ -1,16 +1,10 @@
 fileFormatVersion: 2
-guid: 6bc3e0c5d9977f245be00706f3050faa
+guid: 16b518af92527dd4a9fd9cd109ea5434
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2074879653003191595
-    second: recznik-niebieski-pudzian-team_0
-  - first:
-      213: -6634269661199433510
-    second: recznik-niebieski-pudzian-team_1
-  - first:
-      213: 4335178972807512170
-    second: recznik-niebieski-pudzian-team_2
+      213: -8987132612556924146
+    second: Kart_9_darkred_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -119,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: recznik-niebieski-pudzian-team_0
+      name: Kart_9_darkred_0
       rect:
         serializedVersion: 2
-        x: 258
+        x: 0
         y: 0
-        width: 504
-        height: 768
+        width: 717
+        height: 956
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -134,52 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b25e0fc1d047bcc10800000000000000
-      internalID: 2074879653003191595
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: recznik-niebieski-pudzian-team_1
-      rect:
-        serializedVersion: 2
-        x: 759
-        y: 759
-        width: 14
-        height: 9
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: ad08e0c94e65ee3a0800000000000000
-      internalID: -6634269661199433510
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: recznik-niebieski-pudzian-team_2
-      rect:
-        serializedVersion: 2
-        x: 821
-        y: 640
-        width: 194
-        height: 98
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: a604fe79e46a92c30800000000000000
-      internalID: 4335178972807512170
+      spriteID: e0b5737318a474380800000000000000
+      internalID: -8987132612556924146
       vertices: []
       indices: 
       edges: []
@@ -198,9 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      recznik-niebieski-pudzian-team_0: 2074879653003191595
-      recznik-niebieski-pudzian-team_1: -6634269661199433510
-      recznik-niebieski-pudzian-team_2: 4335178972807512170
+      Kart_9_darkred_0: -8987132612556924146
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
