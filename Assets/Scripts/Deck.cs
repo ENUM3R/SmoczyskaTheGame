@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 [System.Serializable]
 public class DragonCardType
@@ -132,19 +133,19 @@ public class Deck : MonoBehaviour
     {
         for (int i = _cards.Count - 1; i > 0; i--)
         {
-            int j = Random.Range(0, i + 1);
+            int j = UnityEngine.Random.Range(0, i + 1);
             (_cards[i], _cards[j]) = (_cards[j], _cards[i]);
         }
         _currentCardIndex = 0;
         Debug.Log("Deck shuffled");
     }
 
-    public Card DrawCard(Transform parent)
+    public (Card cardComponent, CardData cardData) DrawCard(Transform parent)
     {
         if (_currentCardIndex >= _cards.Count)
         {
             Debug.LogWarning("Deck is empty!");
-            return null;
+            return (null, null);
         }
 
         CardData data = _cards[_currentCardIndex];
@@ -154,12 +155,12 @@ public class Deck : MonoBehaviour
         Card card = cardObject.GetComponent<Card>();
         if (card != null)
         {
-            card.Initialize(data);
-            return card;
+            // Return both the component and the data
+            return (card, data);
         }
         
         Debug.LogError("Card prefab does not have a Card component!");
-        return null;
+        return (null, null);
     }
 
     public int RemainingCards => _cards.Count - _currentCardIndex;

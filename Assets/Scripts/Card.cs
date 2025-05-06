@@ -27,6 +27,7 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     [SerializeField] private Image cardImage;
     [SerializeField] private Button cardButton;
     [SerializeField] private CanvasGroup canvasGroup;
+    private GameManager _gameManager;
     
     [Header("Card Display Settings")]
     [SerializeField] private bool maintainAspectRatio = true;
@@ -37,9 +38,11 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private bool _isFaceUp;
     private bool _isInteractable = true;
     private Vector3 _originalScale;
+    private int _playerIndex = -1;
     
     public CardData Data => _data;
     public bool IsFaceUp => _isFaceUp;
+    public int PlayerIndex => _playerIndex;
     
     public event Action<Card> OnCardFlipped;
     
@@ -91,9 +94,11 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
     }
 
-    public void Initialize(CardData cardData)
+    public void Initialize(CardData cardData, GameManager gameManager, int playerIndex)
     {
         _data = cardData;
+        _gameManager = gameManager;
+        _playerIndex = playerIndex;
         SetFaceDown();
         
         // Apply consistent sizing when card is initialized
@@ -163,10 +168,13 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private void OnClick()
     {
-        if (_isInteractable)
+        if (_isInteractable && _gameManager != null)
         {
-            Flip();
-            Debug.Log($"Card flipped: {_data.cardName}, Value: {_data.value}, Face up: {_isFaceUp}");
+            _gameManager.HandleCardClick(this);
+        }
+        else if (_gameManager == null)
+        {
+            Debug.LogError("GameManager reference not set on Card.");
         }
     }
 

@@ -167,9 +167,13 @@ public class GameManager : MonoBehaviour
             for (int i = 0; i < 2; i++) // Initialize 2 discard piles
             {
                 yield return new WaitForSeconds(cardDealDelay);
-                Card discardCard = deck.DrawCard(discardPiles[i]);
-                if (discardCard != null)
+                var (discardCard, discardCardData) = deck.DrawCard(discardPiles[i]);
+                
+                if (discardCard != null && discardCardData != null)
                 {
+                    // Initialize the discard card (belongs to no player initially, use index -1)
+                    discardCard.Initialize(cardData: discardCardData, gameManager: this, playerIndex: -1);
+                    
                     discardCard.SetFaceUp();
                     SetCardSize(discardCard, discardCardSize);
                     discardPileTopCards[i] = discardCard;
@@ -228,8 +232,9 @@ public class GameManager : MonoBehaviour
         }
 
         // Draw and position card
-        Card card = deck.DrawCard(player.handContainer);
-        if (card != null)
+        var (card, cardData) = deck.DrawCard(player.handContainer);
+        
+        if (card != null && cardData != null)
         {
             card.MoveTo(player.handContainer, position);
             
@@ -250,8 +255,8 @@ public class GameManager : MonoBehaviour
             player.cardsInHand.Add(card);
             playerCards[playerIndex].Add(card);
             
-            // Subscribe to card flip events
-            card.OnCardFlipped += OnCardFlipped;
+            // Initialize the card with GameManager and player index
+            card.Initialize(cardData: cardData, gameManager: this, playerIndex: playerIndex);
         }
     }
     
@@ -274,25 +279,27 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    private void OnCardFlipped(Card card)
-    {
-        // Handle card flip logic here - could be used to track game state
-        Debug.Log($"Card was flipped: {card.Data.cardName}, value: {card.Data.value}");
-    }
-    
     private void OnDeckButtonClicked()
     {
         if (gameState != GameState.PlayerTurn)
             return;
             
         // Player draws a card from the deck
-        Card drawnCard = deck.DrawCard(transform);
-        if (drawnCard != null)
+        var (drawnCard, drawnCardData) = deck.DrawCard(transform);
+        
+        if (drawnCard != null && drawnCardData != null)
         {
+            // Initialize the drawn card (no player index here, maybe -1 or handle differently?)
+            // For now, let's assume drawn cards don't need player index immediately.
+            // We might need a different Initialize or Setup method for this case.
+            // If drawn card needs interaction later, this needs refinement. 
+            // Let's call Initialize with default playerIndex (-1) for now.
+            drawnCard.Initialize(cardData: drawnCardData, gameManager: this, playerIndex: -1); 
+            
             drawnCard.SetFaceUp();
             
             // Show the card to the player (animation could be added here)
-            Debug.Log($"Player {currentPlayerTurn + 1} drew: {drawnCard.Data.cardName}");
+            Debug.Log($"Player {currentPlayerTurn + 1} drew: {drawnCardData.cardName}");
             
             // For now, just discard to first discard pile
             if (discardPiles != null && discardPiles.Length > 0)
@@ -315,12 +322,10 @@ public class GameManager : MonoBehaviour
             
         currentPlayerTurn = (currentPlayerTurn + 1) % players.Length;
         UpdateCurrentPlayerUI();
+        Debug.Log($"Turn ended. Next turn: Player {currentPlayerTurn + 1}");
         
-        Debug.Log($"Player {currentPlayerTurn + 1}'s turn");
-        
-        // Check for game end condition here
-        // For example, if one player has flipped all their cards
-        CheckGameEndCondition();
+        // Add logic here to re-enable interaction for the new current player's cards if needed
+        // For now, we assume cards remain interactable unless specifically disabled.
     }
     
     private void UpdateCurrentPlayerUI()
@@ -402,5 +407,38 @@ public class GameManager : MonoBehaviour
     public void RestartGame()
     {
         InitializeGame();
+    }
+
+    // New method to handle card clicks and manage turns
+    public void HandleCardClick(Card clickedCard)
+    {
+        if (gameState != GameState.PlayerTurn)
+        {
+            Debug.Log("Cannot interact with cards outside of PlayerTurn state.");
+            return;
+        }
+
+        if (clickedCard.PlayerIndex != currentPlayerTurn)
+        {
+            Debug.Log($"It's not Player {clickedCard.PlayerIndex + 1}'s turn! Current turn: Player {currentPlayerTurn + 1}");
+            return;
+        }
+
+        // It's the correct player's turn, and they clicked their own card
+        if (!clickedCard.IsFaceUp)
+        {
+            clickedCard.Flip();
+            Debug.Log($"Player {currentPlayerTurn + 1} flipped card: {clickedCard.Data.cardName}");
+            
+            // Potentially add game logic based on the flipped card here
+            
+            // End the current player's turn after flipping a card
+            NextTurn(); 
+        }
+        else
+        {
+            // Optional: Handle clicking an already face-up card if needed
+            Debug.Log("Card is already face up.");
+        }
     }
 }
