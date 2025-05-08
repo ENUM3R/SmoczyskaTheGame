@@ -615,11 +615,26 @@ public class GameManager : MonoBehaviour
         // Move it to the same location as a card drawn from the deck panel
         Transform revealParent = (deckButton != null) ? deckButton.transform : this.transform; 
         selectedCard.transform.SetParent(revealParent, false); 
-        selectedCard.transform.localPosition = Vector3.zero; 
+        
+        // Reset scale and ensure proper RectTransform setup for centering
+        selectedCard.transform.localScale = Vector3.one;
+        RectTransform cardRect = selectedCard.GetComponent<RectTransform>();
+        if (cardRect != null)
+        {
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            // Assuming card's pivot is already centered (0.5, 0.5) in its prefab settings.
+            // If not, uncomment and set: cardRect.pivot = new Vector2(0.5f, 0.5f);
+            cardRect.anchoredPosition = Vector2.zero;
+        }
+        else // Fallback for non-RectTransform (unlikely for UI card)
+        {
+            selectedCard.transform.localPosition = Vector3.zero; 
+        }
 
         selectedCard.SetPlayerIndex(-1); 
-        SetCardSize(selectedCard, handCardSize); 
-        selectedCard.SetFaceUp(); 
+        SetCardSize(selectedCard, handCardSize); // Ensure card is resized to hand card size
+        selectedCard.SetFaceUp(); // Ensure card is face up
 
         // Now, update the original discard pile from which the card was taken
         // Check if the originalParentPileTransform (which is discardPiles[pileIndex]) has any children left.
