@@ -40,40 +40,57 @@ public class Player : MonoBehaviour
 
     private void RepositionCards()
     {
-        // Position cards in the hand based on player's position
-        // This is a simplified version; adjust as needed for your layout
+        // Diagnostic logs can be removed or commented out now
+        // Debug.Log($"Player {playerIndex} RepositionCards: Starting. Hand count: {cardsInHand.Count}");
+        // for(int k=0; k < cardsInHand.Count; ++k) {
+        //     if (cardsInHand[k] != null && cardsInHand[k].Data != null) {
+        //         Debug.Log($"Player {playerIndex} RepositionCards: Initial state - Card at list index {k} is {cardsInHand[k].Data.cardName} (InstanceID: {cardsInHand[k].GetInstanceID()})");
+        //     } else {
+        //          Debug.Log($"Player {playerIndex} RepositionCards: Initial state - Card at list index {k} is NULL CARD DATA OR CARD");
+        //     }
+        // }
+
         for (int i = 0; i < cardsInHand.Count; i++)
         {
             Card card = cardsInHand[i];
             if (card != null)
             {
-                // Position in a grid (2 rows of 3)
-                int row = i / 3;
-                int col = i % 3;
-                
-                // Different layouts based on player position
-                Vector3 position;
-                
-                // Bottom player (0) or Top player (2)
-                if (playerIndex == 0 || playerIndex == 2)
-                {
-                    position = new Vector3(
-                        col * 120f - 120f, 
-                        -row * 150f, 
-                        0
-                    );
-                }
-                // Left player (1) or Right player (3)
-                else
-                {
-                    position = new Vector3(
-                        0,
-                        -col * 150f + 150f, 
-                        0
-                    );
-                }
-                
-                card.transform.localPosition = position;
+                // The GridLayoutGroup will handle visual positioning.
+                // We just need to ensure the card's sibling order in the hierarchy
+                // matches its order in the cardsInHand list.
+                card.transform.SetSiblingIndex(i);
+
+                // Old manual positioning logic (now removed/commented):
+                // int row = i / 3;
+                // int col = i % 3;
+                // Vector3 position;
+                // if (playerIndex == 0 || playerIndex == 2)
+                // {
+                //     position = new Vector3(
+                //         col * 120f - 120f, 
+                //         -row * 150f, 
+                //         0
+                //     );
+                // }
+                // else
+                // {
+                //     position = new Vector3(
+                //         0,
+                //         -col * 150f + 150f, 
+                //         0
+                //     );
+                // }
+                // if (card.Data != null) {
+                //     Debug.Log($"Player {playerIndex} RepositionCards: Processing card '{card.Data.cardName}' (InstanceID: {card.GetInstanceID()}) from list index {i}. Calculated row: {row}, col: {col}. Target localPosition: {position}");
+                // } else {
+                //     Debug.Log($"Player {playerIndex} RepositionCards: Processing card with NULL DATA (InstanceID: {card.GetInstanceID()}) from list index {i}. Calculated row: {row}, col: {col}. Target localPosition: {position}");
+                // }
+                // card.transform.localPosition = position;
+                // if (card.Data != null) {
+                //     Debug.Log($"Player {playerIndex} RepositionCards: Card '{card.Data.cardName}' (InstanceID: {card.GetInstanceID()}) at list index {i} actual localPosition after set: {card.transform.localPosition}");
+                // } else {
+                //     Debug.Log($"Player {playerIndex} RepositionCards: Card with NULL DATA (InstanceID: {card.GetInstanceID()}) at list index {i} actual localPosition after set: {card.transform.localPosition}");
+                // }
             }
         }
     }

@@ -488,6 +488,15 @@ public class GameManager : MonoBehaviour
         SetCardSize(cardFromDeckToHand, handCardSize); 
         // Position will be set by Player's UpdateHandLayout
 
+        Debug.Log($"PerformSwap: About to call UpdateHandLayout for Player {currentPlayer.playerIndex}. Card at originalIndex ({originalIndex}) in their hand is now {currentPlayer.cardsInHand[originalIndex].Data.cardName}. Player hand count: {currentPlayer.cardsInHand.Count}");
+        for(int k=0; k < currentPlayer.cardsInHand.Count; ++k) {
+            if (currentPlayer.cardsInHand[k] != null && currentPlayer.cardsInHand[k].Data != null) {
+                 Debug.Log($"PerformSwap: Player {currentPlayer.playerIndex} hand before reposition, index {k}: {currentPlayer.cardsInHand[k].Data.cardName} (InstanceID: {currentPlayer.cardsInHand[k].GetInstanceID()})");
+            } else {
+                 Debug.Log($"PerformSwap: Player {currentPlayer.playerIndex} hand before reposition, index {k}: NULL CARD DATA OR CARD");
+            }
+        }
+
         // 4. Update player's visual hand layout
         currentPlayer.UpdateHandLayout();
 
