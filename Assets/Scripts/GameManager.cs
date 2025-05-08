@@ -71,6 +71,7 @@ public class GameManager : MonoBehaviour
         }
 
         InitializeGame();
+        UpdateCardInteractability(); // Initial call
     }
     
     private void InitializePlayers()
@@ -183,13 +184,12 @@ public class GameManager : MonoBehaviour
                     discardCard.SetFaceUp();
                     SetCardSize(discardCard, discardCardSize);
                     discardPileTopCards[i] = discardCard;
-                    discardCard.ConfigureForDiscardPile();
+                    // ConfigureForDiscardPile makes it non-interactable by default. UpdateCardInteractability will manage.
+                    discardCard.ConfigureForDiscardPile(); 
                 }
             }
         }
         
-        // Set current player (random for first game)
-        // currentPlayerTurn = Random.Range(0, players.Length);
         // Set current player to Player 1 (index 0)
         currentPlayerTurn = 0;
         UpdateCurrentPlayerUI();
@@ -202,6 +202,7 @@ public class GameManager : MonoBehaviour
         }
         
         Debug.Log($"Game initialized. Player {currentPlayerTurn + 1}'s turn.");
+        UpdateCardInteractability(); // Call after game state is PlayerTurn
     }
 
     private void DealCardToPlayer(int playerIndex, int cardPosition)
@@ -293,21 +294,14 @@ public class GameManager : MonoBehaviour
         if (gameState != GameState.PlayerTurn) 
             return;
 
-        if (cardAwaitingDiscardDecision != null)
+        // Condition: Can only draw if no card is revealed and no card awaits discard
+        if (revealedDeckCard != null || cardAwaitingDiscardDecision != null)
         {
-            Debug.Log("A card is awaiting discard. Please select a discard pile.");
+            Debug.Log("Cannot draw from deck: An action is pending with a revealed or discard-pending card.");
             return;
         }
-
-        // If a card is already revealed, and player clicks deck again, replace the old revealed card.
-        if (revealedDeckCard != null)
-        {
-            Debug.Log($"Replacing existing revealed card {revealedDeckCard.Data.cardName} on deck panel with a new draw.");
-            Destroy(revealedDeckCard.gameObject); // Or return to deck logic
-            revealedDeckCard = null;
-        }
             
-        Transform deckPanelTransform = (deckButton != null) ? deckButton.transform : transform;
+        Transform deckPanelTransform = (deckButton != null) ? deckButton.transform : transform; // Should be a dedicated reveal panel
         var (drawnCard, drawnCardData) = deck.DrawCard(deckPanelTransform);
         
         if (drawnCard != null && drawnCardData != null)
@@ -318,8 +312,9 @@ public class GameManager : MonoBehaviour
             SetCardSize(drawnCard, handCardSize);
 
             this.revealedDeckCard = drawnCard;
-
             Debug.Log($"Player {currentPlayerTurn + 1} drew: {drawnCardData.cardName} onto DeckPanel. It is now {this.revealedDeckCard.Data.cardName}.");
+            
+            UpdateCardInteractability(); // Update interactability after drawing
         }
     }
     
@@ -331,6 +326,7 @@ public class GameManager : MonoBehaviour
         currentPlayerTurn = (currentPlayerTurn + 1) % players.Length;
         UpdateCurrentPlayerUI();
         Debug.Log($"Turn ended. Next turn: Player {currentPlayerTurn + 1}");
+        UpdateCardInteractability(); // Update for the new turn
     }
     
     private void UpdateCurrentPlayerUI()
@@ -431,7 +427,7 @@ public class GameManager : MonoBehaviour
         this.cardAwaitingDiscardDecision = this.revealedDeckCard;
         this.revealedDeckCard = null;
         Debug.Log($"Card {cardAwaitingDiscardDecision.Data.cardName} is now awaiting discard. Please select a discard pile.");
-        // UI should prompt for discard pile selection.
+        UpdateCardInteractability(); // Update after revealed card is moved to awaiting discard
     }
 
     // New method to handle card clicks and manage turns
@@ -499,7 +495,7 @@ public class GameManager : MonoBehaviour
         }
 
         Player currentPlayer = players[currentPlayerTurn];
-        Card cardFromDeckToHand = this.revealedDeckCard;
+        Card cardFromDeckToHand = this.revealedDeckCard; // This is the card from DeckPanel/DiscardPanel
 
         Transform deckPanelTransform = cardFromDeckToHand.transform.parent; 
         Transform playerHandContainer = currentPlayer.handContainer;
@@ -515,48 +511,33 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.LogError($"Critical Error: Card {playerHandCardToDeck.Data.cardName} (Player: {playerHandCardToDeck.PlayerIndex}) was clicked for swap but not found in current player {currentPlayer.playerIndex}'s hand list. Aborting swap.");
-            // NOTE: If we abort here, the revealedDeckCard (cardFromDeckToHand) is effectively lost from play
-            // as it's not returned to deck or discard. This might need more robust error handling.
-            // For now, the turn won't end, and the revealedDeckCard remains. The player might need to take another action or end turn.
             return; 
         }
         
         // 2. Configure and move card from Hand to Deck Panel (playerHandCardToDeck)
-        playerHandCardToDeck.transform.SetParent(deckPanelTransform, false);
-        playerHandCardToDeck.transform.SetAsLastSibling(); // Ensure it's drawn on top
+        // This card becomes the one awaiting discard, effectively replacing the revealedDeckCard's spot conceptually.
+        playerHandCardToDeck.transform.SetParent(deckPanelTransform, false); 
+        playerHandCardToDeck.transform.SetAsLastSibling(); 
         playerHandCardToDeck.SetPlayerIndex(-1); 
         SetCardSize(playerHandCardToDeck, handCardSize); 
-        playerHandCardToDeck.SetFaceUp(); // Ensure the card moved to the deck panel is face up
-        playerHandCardToDeck.transform.localPosition = Vector3.zero; // Set position *after* all other visual updates
+        playerHandCardToDeck.SetFaceUp(); 
+        playerHandCardToDeck.transform.localPosition = Vector3.zero;
 
         // 3. Configure and move card from Deck Panel to Hand (cardFromDeckToHand)
         cardFromDeckToHand.transform.SetParent(playerHandContainer, false);
         cardFromDeckToHand.SetPlayerIndex(currentPlayerTurn); 
         SetCardSize(cardFromDeckToHand, handCardSize); 
-        // Position will be set by Player's UpdateHandLayout
-
-        Debug.Log($"PerformSwap: About to call UpdateHandLayout for Player {currentPlayer.playerIndex}. Card at originalIndex ({originalIndex}) in their hand is now {currentPlayer.cardsInHand[originalIndex].Data.cardName}. Player hand count: {currentPlayer.cardsInHand.Count}");
-        for(int k=0; k < currentPlayer.cardsInHand.Count; ++k) {
-            if (currentPlayer.cardsInHand[k] != null && currentPlayer.cardsInHand[k].Data != null) {
-                 Debug.Log($"PerformSwap: Player {currentPlayer.playerIndex} hand before reposition, index {k}: {currentPlayer.cardsInHand[k].Data.cardName} (InstanceID: {currentPlayer.cardsInHand[k].GetInstanceID()})");
-            } else {
-                 Debug.Log($"PerformSwap: Player {currentPlayer.playerIndex} hand before reposition, index {k}: NULL CARD DATA OR CARD");
-            }
-        }
-
-        // 4. Update player's visual hand layout
+        
         currentPlayer.UpdateHandLayout();
 
-        // 5. Update the game state's `revealedDeckCard` reference
-        // The card that moved TO the deck panel is now the one "revealed" there for the next potential action (or cleanup on turn end)
-        this.revealedDeckCard = playerHandCardToDeck; 
+        // 5. The card that moved from hand to the deck panel is now awaiting discard.
+        // The original revealedDeckCard is now in the player's hand.
+        this.cardAwaitingDiscardDecision = playerHandCardToDeck; 
+        this.revealedDeckCard = null; // No card is "revealed on deck panel" anymore.
 
-        Debug.Log($"Player {currentPlayerTurn + 1} swapped. Card from hand {playerHandCardToDeck.Data.cardName} moved to deck. Card from deck {cardFromDeckToHand.Data.cardName} moved to hand. New revealed deck card is {this.revealedDeckCard.Data.cardName}");
-
-        // 6. End turn
-        // NextTurn() will also handle clearing the new revealedDeckCard if the *next* player doesn't interact with it.
-        this.cardAwaitingDiscardDecision = playerHandCardToDeck;
-        this.revealedDeckCard = null;
+        Debug.Log($"Player {currentPlayerTurn + 1} swapped. Card from hand {playerHandCardToDeck.Data.cardName} moved to deck panel area. Card {cardFromDeckToHand.Data.cardName} moved to hand. Card {this.cardAwaitingDiscardDecision.Data.cardName} is awaiting discard.");
+        
+        UpdateCardInteractability(); // Update after swap
     }
 
     public void SelectDiscardPile(int pileIndex)
@@ -569,8 +550,8 @@ public class GameManager : MonoBehaviour
         if (pileIndex < 0 || discardPiles == null || pileIndex >= discardPiles.Length)
         {
             Debug.LogError($"Invalid pileIndex {pileIndex} for SelectDiscardPile.");
-            cardAwaitingDiscardDecision = null; // Clear the card to prevent further errors with it.
-            NextTurn(); // Proceed to next turn to not stall the game.
+            cardAwaitingDiscardDecision = null; 
+            NextTurn(); 
             return;
         }
 
@@ -582,13 +563,140 @@ public class GameManager : MonoBehaviour
         cardToDiscard.transform.SetParent(discardPiles[pileIndex], false);
         SetCardSize(cardToDiscard, discardCardSize); 
         cardToDiscard.transform.localPosition = Vector3.zero; 
-        cardToDiscard.transform.SetAsLastSibling(); // Place it on top
-        cardToDiscard.ConfigureForDiscardPile();
+        cardToDiscard.transform.SetAsLastSibling(); 
+        cardToDiscard.ConfigureForDiscardPile(); // Makes it non-interactable and sets alpha
 
         if (discardPileTopCards != null && pileIndex < discardPileTopCards.Length) {
-            discardPileTopCards[pileIndex] = cardToDiscard; // Update tracking if used
+            discardPileTopCards[pileIndex] = cardToDiscard; 
         }
 
-        NextTurn();
+        NextTurn(); // NextTurn will call UpdateCardInteractability
+    }
+
+    public bool IsTopDiscardCard(Card card, out int pileIndex)
+    {
+        pileIndex = -1;
+        if (discardPileTopCards == null || card == null) return false;
+
+        for (int i = 0; i < discardPileTopCards.Length; i++)
+        {
+            if (discardPileTopCards[i] == card)
+            {
+                pileIndex = i;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void HandleDiscardPileCardSelected(Card selectedCard, int pileIndex)
+    {
+        if (gameState != GameState.PlayerTurn || revealedDeckCard != null || cardAwaitingDiscardDecision != null)
+        {
+            Debug.LogWarning("Cannot select card from discard pile: Action already in progress or not player's turn.");
+            return;
+        }
+
+        if (pileIndex < 0 || pileIndex >= discardPileTopCards.Length || discardPileTopCards[pileIndex] != selectedCard)
+        {
+            Debug.LogError($"Invalid discard pile selection or card mismatch. Pile: {pileIndex}");
+            return;
+        }
+
+        Debug.Log($"Player {currentPlayerTurn + 1} selected {selectedCard.Data.cardName} from discard pile {pileIndex + 1}.");
+
+        // Take the card from the discard pile
+        // We will reparent it, then update discardPileTopCards based on what's left.
+        Transform originalParentPileTransform = discardPiles[pileIndex]; // The transform of the pile card was taken from
+
+        // This card becomes the "revealedDeckCard"
+        this.revealedDeckCard = selectedCard;
+        
+        // Move it to the same location as a card drawn from the deck panel
+        Transform revealParent = (deckButton != null) ? deckButton.transform : this.transform; 
+        selectedCard.transform.SetParent(revealParent, false); 
+        selectedCard.transform.localPosition = Vector3.zero; 
+
+        selectedCard.SetPlayerIndex(-1); 
+        SetCardSize(selectedCard, handCardSize); 
+        selectedCard.SetFaceUp(); 
+
+        // Now, update the original discard pile from which the card was taken
+        // Check if the originalParentPileTransform (which is discardPiles[pileIndex]) has any children left.
+        if (originalParentPileTransform.childCount > 0)
+        {
+            Transform newTopCardTransform = originalParentPileTransform.GetChild(originalParentPileTransform.childCount - 1);
+            Card newTopCardComponent = newTopCardTransform.GetComponent<Card>();
+            if (newTopCardComponent != null)
+            {
+                discardPileTopCards[pileIndex] = newTopCardComponent;
+                Debug.Log($"New top card on discard pile {pileIndex + 1} is {newTopCardComponent.Data.cardName}");
+            }
+            else
+            {
+                discardPileTopCards[pileIndex] = null; // Safety: if the top child isn't a card
+                Debug.LogError($"Top child object on discard pile {pileIndex + 1} is not a Card component after taking one!");
+            }
+        }
+        else
+        {
+            discardPileTopCards[pileIndex] = null; // Pile is now empty
+            Debug.Log($"Discard pile {pileIndex + 1} is now empty after taking {selectedCard.Data.cardName}.");
+        }
+
+        Debug.Log($"Card {revealedDeckCard.Data.cardName} is now the revealed card.");
+        UpdateCardInteractability();
+    }
+
+    private void UpdateCardInteractability()
+    {
+        if (players == null || players.Length == 0) return; // Not initialized yet
+
+        bool canPerformInitialAction = gameState == GameState.PlayerTurn && revealedDeckCard == null && cardAwaitingDiscardDecision == null;
+
+        // Deck button
+        if (deckButton != null)
+        {
+            deckButton.interactable = canPerformInitialAction;
+        }
+
+        // Discard pile top cards
+        if (discardPileTopCards != null)
+        {
+            for (int i = 0; i < discardPileTopCards.Length; i++)
+            {
+                if (discardPileTopCards[i] != null)
+                {
+                    // A card on discard pile is interactable if it's an initial action phase
+                    discardPileTopCards[i].SetInteractable(canPerformInitialAction);
+                }
+            }
+        }
+        
+        // Revealed deck card (from deck or discard pile)
+        if (revealedDeckCard != null)
+        {
+            revealedDeckCard.SetInteractable(true); // Always interactable if it exists, for discarding or initiating swap
+        }
+
+        // Player hand cards
+        for (int i = 0; i < players.Length; i++)
+        {
+            bool isCurrentPlayer = i == currentPlayerTurn;
+            foreach (Card cardInHand in players[i].cardsInHand)
+            {
+                if (cardInHand != null)
+                {
+                    // Hand card is interactable if it's current player's turn AND a card is revealed (for swap)
+                    bool canSwapThisCard = isCurrentPlayer && revealedDeckCard != null && CanSwapWithRevealedCard(cardInHand);
+                    cardInHand.SetInteractable(canSwapThisCard);
+                }
+            }
+        }
+        
+        // If a card is awaiting discard, only discard piles (buttons, not cards) should be active.
+        // This part is handled by the discard pile UI elements themselves, not card interactability.
+        // For example, actual discard pile GameObjects might have Button components.
+        // The Card objects on discard piles are managed above.
     }
 }

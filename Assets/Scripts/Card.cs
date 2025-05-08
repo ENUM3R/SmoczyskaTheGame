@@ -147,7 +147,7 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         if (canvasGroup != null)
         {
             canvasGroup.blocksRaycasts = interactable;
-            canvasGroup.alpha = interactable ? 1f : 0.7f;
+            canvasGroup.alpha = 1f; // Always fully opaque
             // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) SetInteractable({interactable}): Alpha set to {canvasGroup.alpha}", gameObject);
         }
         // else
@@ -218,6 +218,11 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         else if (_gameManager.IsRevealedDeckCard(this))
         {
              _gameManager.HandleClickedRevealedDeckCard(this);
+        }
+        // NEW: Check if this card is a clickable top card of a discard pile
+        else if (PlayerIndex == -1 && _gameManager.IsTopDiscardCard(this, out int pileIndex)) 
+        {
+             _gameManager.HandleDiscardPileCardSelected(this, pileIndex);
         }
         // Otherwise, it's likely a click on a hand card not for a swap,
         // or an invalid click. GameManager.HandleCardClick will sort it out.
