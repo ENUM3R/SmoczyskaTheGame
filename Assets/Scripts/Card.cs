@@ -209,12 +209,19 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             return;
         }
 
-        // Check for swap condition first
-        if (_gameManager.CanSwapWithRevealedCard(this))
+        // Check for swap condition first if this card is a hand card
+        if (PlayerIndex != -1 && _gameManager.CanSwapWithRevealedCard(this))
         {
             _gameManager.PerformSwap(this);
         }
-        else // Original behavior if not swapping
+        // Check if this card IS the revealedDeckCard itself
+        else if (_gameManager.IsRevealedDeckCard(this))
+        {
+             _gameManager.HandleClickedRevealedDeckCard(this);
+        }
+        // Otherwise, it's likely a click on a hand card not for a swap,
+        // or an invalid click. GameManager.HandleCardClick will sort it out.
+        else 
         {
             _gameManager.HandleCardClick(this);
         }

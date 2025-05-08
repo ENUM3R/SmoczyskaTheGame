@@ -414,8 +414,28 @@ public class GameManager : MonoBehaviour
         InitializeGame();
     }
 
+    public bool IsRevealedDeckCard(Card card)
+    {
+        return revealedDeckCard != null && card == revealedDeckCard;
+    }
+
+    public void HandleClickedRevealedDeckCard(Card clickedDeckCard)
+    {
+        if (gameState != GameState.PlayerTurn || cardAwaitingDiscardDecision != null || revealedDeckCard == null || clickedDeckCard != revealedDeckCard)
+        {
+            Debug.LogWarning("HandleClickedRevealedDeckCard called inappropriately.");
+            return;
+        }
+
+        Debug.Log($"Player {currentPlayerTurn + 1} clicked the revealed deck card: {clickedDeckCard.Data.cardName}. Preparing to discard.");
+        this.cardAwaitingDiscardDecision = this.revealedDeckCard;
+        this.revealedDeckCard = null;
+        Debug.Log($"Card {cardAwaitingDiscardDecision.Data.cardName} is now awaiting discard. Please select a discard pile.");
+        // UI should prompt for discard pile selection.
+    }
+
     // New method to handle card clicks and manage turns
-    public void HandleCardClick(Card clickedCard)
+    public void HandleCardClick(Card clickedCard) // Called when a hand card is clicked (not for a valid swap, and not the revealedDeckCard)
     {
         if (gameState != GameState.PlayerTurn)
         {
@@ -425,31 +445,40 @@ public class GameManager : MonoBehaviour
 
         if (cardAwaitingDiscardDecision != null)
         {
-            Debug.Log("A card is awaiting discard. Please select a discard pile before interacting with hand cards.");
+            // This state means player has already swapped and needs to discard the card from deck panel,
+            // OR they clicked the revealedDeckCard and now need to discard it.
+            // A click on another card at this point is invalid.
+            Debug.Log("A card is awaiting discard. Please select a discard pile before interacting with other cards.");
             return;
         }
 
-        if (revealedDeckCard != null)
+        // At this point, Card.OnClick determined it's not a valid swap and not the revealedDeckCard itself.
+        // So, clickedCard is likely a player's hand card.
+        if (clickedCard.PlayerIndex == currentPlayerTurn) // It's current player's hand card
         {
-            Debug.Log("A card is revealed on the deck. Click one of your hand cards to swap, or the deck card might need specific action.");
+            if (revealedDeckCard == null)
+            {
+                // Player clicked a hand card, but no card is revealed from the deck panel.
+                // This is the direct flip in hand we want to prevent.
+                Debug.Log($"Player {currentPlayerTurn + 1}, action denied: Cannot interact with hand card {clickedCard.Data.cardName}. Must first reveal a card from the deck panel to initiate a swap.");
+            }
+            else
+            {
+                // Player clicked a hand card, a card IS revealed from deck panel,
+                // but this specific hand card is not a valid target for a swap (CanSwapWithRevealedCard was false).
+                Debug.Log($"Player {currentPlayerTurn + 1}, action denied: Hand card {clickedCard.Data.cardName} is not a valid swap target for the revealed deck card {revealedDeckCard.Data.cardName}. Try a different hand card or discard the revealed card.");
+            }
         }
-
-        if (clickedCard.PlayerIndex != currentPlayerTurn)
+        else if (clickedCard.PlayerIndex != -1) // It's another player's card
         {
-            Debug.Log($"It's not Player {clickedCard.PlayerIndex + 1}'s turn, or card does not belong to current player! Current turn: Player {currentPlayerTurn + 1}");
-            return;
+            Debug.Log($"Cannot interact with Player {clickedCard.PlayerIndex + 1}'s card. It is Player {currentPlayerTurn + 1}'s turn.");
         }
-
-        if (!clickedCard.IsFaceUp)
+        else // Card has PlayerIndex -1 but is NOT the revealedDeckCard (that case is handled by HandleClickedRevealedDeckCard)
         {
-            clickedCard.Flip();
-            Debug.Log($"Player {currentPlayerTurn + 1} flipped card: {clickedCard.Data.cardName}");
-            NextTurn(); 
+            // This could be a card on a discard pile if they were made clickable, or some other unowned card.
+            Debug.Log($"Invalid card click: {clickedCard.Data?.cardName}. This card is not part of your hand or the revealed deck card.");
         }
-        else
-        {
-            Debug.Log("Card is already face up.");
-        }
+        // No flip action, no NextTurn() here. Player needs to make a valid move.
     }
 
     public bool CanSwapWithRevealedCard(Card handCard)
