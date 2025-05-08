@@ -287,7 +287,10 @@ public class GameManager : MonoBehaviour
             return;
             
         // Player draws a card from the deck
-        var (drawnCard, drawnCardData) = deck.DrawCard(transform);
+        // If deckButton is null, we might need a fallback or log an error.
+        // For now, let's assume deckButton is assigned and is the DeckPanel.
+        Transform deckPanelTransform = (deckButton != null) ? deckButton.transform : transform; // Use deckButton's transform as parent
+        var (drawnCard, drawnCardData) = deck.DrawCard(deckPanelTransform);
         
         if (drawnCard != null && drawnCardData != null)
         {
@@ -300,20 +303,18 @@ public class GameManager : MonoBehaviour
             
             drawnCard.SetFaceUp();
             
+            // Position the card on the DeckPanel (likely at its center, local position zero)
+            drawnCard.transform.localPosition = Vector3.zero; 
+            // Set an appropriate size, perhaps handCardSize or a specific size for the deck
+            SetCardSize(drawnCard, handCardSize); // Or a different size if needed
+
             // Show the card to the player (animation could be added here)
-            Debug.Log($"Player {currentPlayerTurn + 1} drew: {drawnCardData.cardName}");
+            Debug.Log($"Player {currentPlayerTurn + 1} drew: {drawnCardData.cardName} onto DeckPanel");
             
-            // For now, just discard to first discard pile
-            if (discardPiles != null && discardPiles.Length > 0)
-            {
-                drawnCard.MoveTo(discardPiles[0], Vector3.zero);
-                SetCardSize(drawnCard, discardCardSize);
-                discardPileTopCards[0] = drawnCard;
-            }
-            else
-            {
-                Destroy(drawnCard.gameObject);
-            }
+            // We no longer move it to a discard pile here.
+            // We might need to manage this drawn card if it's meant to be temporary
+            // or if another action should follow (e.g., moving it to hand or a discard pile after a delay/animation).
+            // For now, it will just stay on top of the DeckPanel.
         }
     }
     
