@@ -182,7 +182,9 @@ public class GameManager : MonoBehaviour
         }
         
         // Set current player (random for first game)
-        currentPlayerTurn = Random.Range(0, players.Length);
+        // currentPlayerTurn = Random.Range(0, players.Length);
+        // Set current player to Player 1 (index 0)
+        currentPlayerTurn = 0;
         UpdateCurrentPlayerUI();
         
         // Start the game
