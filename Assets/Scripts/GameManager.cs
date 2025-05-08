@@ -34,6 +34,7 @@ public class GameManager : MonoBehaviour
     private GameState gameState = GameState.Setup;
     private Card[] discardPileTopCards;
     private Card revealedDeckCard = null;
+    private Card cardAwaitingDiscardDecision = null;
 
     private void Start()
     {
@@ -287,6 +288,12 @@ public class GameManager : MonoBehaviour
         if (gameState != GameState.PlayerTurn) 
             return;
 
+        if (cardAwaitingDiscardDecision != null)
+        {
+            Debug.Log("A card is awaiting discard. Please select a discard pile.");
+            return;
+        }
+
         // If a card is already revealed, and player clicks deck again, replace the old revealed card.
         if (revealedDeckCard != null)
         {
@@ -411,6 +418,12 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        if (cardAwaitingDiscardDecision != null)
+        {
+            Debug.Log("A card is awaiting discard. Please select a discard pile before interacting with hand cards.");
+            return;
+        }
+
         if (revealedDeckCard != null)
         {
             Debug.Log("A card is revealed on the deck. Click one of your hand cards to swap, or the deck card might need specific action.");
@@ -436,7 +449,7 @@ public class GameManager : MonoBehaviour
 
     public bool CanSwapWithRevealedCard(Card handCard)
     {
-        if (revealedDeckCard == null || gameState != GameState.PlayerTurn)
+        if (revealedDeckCard == null || gameState != GameState.PlayerTurn || cardAwaitingDiscardDecision != null)
         {
             return false;
         }
@@ -508,6 +521,40 @@ public class GameManager : MonoBehaviour
 
         // 6. End turn
         // NextTurn() will also handle clearing the new revealedDeckCard if the *next* player doesn't interact with it.
+        this.cardAwaitingDiscardDecision = playerHandCardToDeck;
+        this.revealedDeckCard = null;
+    }
+
+    public void SelectDiscardPile(int pileIndex)
+    {
+        if (cardAwaitingDiscardDecision == null)
+        {
+            Debug.LogWarning("SelectDiscardPile called, but no card is awaiting discard decision.");
+            return;
+        }
+        if (pileIndex < 0 || discardPiles == null || pileIndex >= discardPiles.Length)
+        {
+            Debug.LogError($"Invalid pileIndex {pileIndex} for SelectDiscardPile.");
+            cardAwaitingDiscardDecision = null; // Clear the card to prevent further errors with it.
+            NextTurn(); // Proceed to next turn to not stall the game.
+            return;
+        }
+
+        Card cardToDiscard = this.cardAwaitingDiscardDecision;
+        this.cardAwaitingDiscardDecision = null;
+
+        Debug.Log($"Player {currentPlayerTurn + 1} is discarding {cardToDiscard.Data.cardName} to discard pile {pileIndex + 1}.");
+
+        cardToDiscard.transform.SetParent(discardPiles[pileIndex], false);
+        SetCardSize(cardToDiscard, discardCardSize); 
+        cardToDiscard.transform.localPosition = Vector3.zero; 
+        cardToDiscard.transform.SetAsLastSibling(); // Place it on top
+        // cardToDiscard.SetPlayerIndex(-1); // Already set in PerformSwap
+
+        if (discardPileTopCards != null && pileIndex < discardPileTopCards.Length) {
+            discardPileTopCards[pileIndex] = cardToDiscard; // Update tracking if used
+        }
+
         NextTurn();
     }
 }
