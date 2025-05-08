@@ -44,6 +44,11 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public bool IsFaceUp => _isFaceUp;
     public int PlayerIndex => _playerIndex;
     
+    public void SetPlayerIndex(int newPlayerIndex)
+    {
+        _playerIndex = newPlayerIndex;
+    }
+
     public event Action<Card> OnCardFlipped;
     
     private void Awake()
@@ -168,13 +173,23 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private void OnClick()
     {
-        if (_isInteractable && _gameManager != null)
+        if (!_isInteractable || _gameManager == null)
+        {
+            if (_gameManager == null)
+            {
+                Debug.LogError("GameManager reference not set on Card.");
+            }
+            return;
+        }
+
+        // Check for swap condition first
+        if (_gameManager.CanSwapWithRevealedCard(this))
+        {
+            _gameManager.PerformSwap(this);
+        }
+        else // Original behavior if not swapping
         {
             _gameManager.HandleCardClick(this);
-        }
-        else if (_gameManager == null)
-        {
-            Debug.LogError("GameManager reference not set on Card.");
         }
     }
 

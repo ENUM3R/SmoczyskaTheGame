@@ -33,6 +33,7 @@ public class GameManager : MonoBehaviour
     private int currentPlayerTurn = 0;
     private GameState gameState = GameState.Setup;
     private Card[] discardPileTopCards;
+    private Card revealedDeckCard = null;
 
     private void Start()
     {
@@ -283,38 +284,30 @@ public class GameManager : MonoBehaviour
     
     private void OnDeckButtonClicked()
     {
-        if (gameState != GameState.PlayerTurn)
+        if (gameState != GameState.PlayerTurn) 
             return;
+
+        // If a card is already revealed, and player clicks deck again, replace the old revealed card.
+        if (revealedDeckCard != null)
+        {
+            Debug.Log($"Replacing existing revealed card {revealedDeckCard.Data.cardName} on deck panel with a new draw.");
+            Destroy(revealedDeckCard.gameObject); // Or return to deck logic
+            revealedDeckCard = null;
+        }
             
-        // Player draws a card from the deck
-        // If deckButton is null, we might need a fallback or log an error.
-        // For now, let's assume deckButton is assigned and is the DeckPanel.
-        Transform deckPanelTransform = (deckButton != null) ? deckButton.transform : transform; // Use deckButton's transform as parent
+        Transform deckPanelTransform = (deckButton != null) ? deckButton.transform : transform;
         var (drawnCard, drawnCardData) = deck.DrawCard(deckPanelTransform);
         
         if (drawnCard != null && drawnCardData != null)
         {
-            // Initialize the drawn card (no player index here, maybe -1 or handle differently?)
-            // For now, let's assume drawn cards don't need player index immediately.
-            // We might need a different Initialize or Setup method for this case.
-            // If drawn card needs interaction later, this needs refinement. 
-            // Let's call Initialize with default playerIndex (-1) for now.
             drawnCard.Initialize(cardData: drawnCardData, gameManager: this, playerIndex: -1); 
-            
             drawnCard.SetFaceUp();
-            
-            // Position the card on the DeckPanel (likely at its center, local position zero)
             drawnCard.transform.localPosition = Vector3.zero; 
-            // Set an appropriate size, perhaps handCardSize or a specific size for the deck
-            SetCardSize(drawnCard, handCardSize); // Or a different size if needed
+            SetCardSize(drawnCard, handCardSize);
 
-            // Show the card to the player (animation could be added here)
-            Debug.Log($"Player {currentPlayerTurn + 1} drew: {drawnCardData.cardName} onto DeckPanel");
-            
-            // We no longer move it to a discard pile here.
-            // We might need to manage this drawn card if it's meant to be temporary
-            // or if another action should follow (e.g., moving it to hand or a discard pile after a delay/animation).
-            // For now, it will just stay on top of the DeckPanel.
+            this.revealedDeckCard = drawnCard;
+
+            Debug.Log($"Player {currentPlayerTurn + 1} drew: {drawnCardData.cardName} onto DeckPanel. It is now {this.revealedDeckCard.Data.cardName}.");
         }
     }
     
@@ -326,9 +319,6 @@ public class GameManager : MonoBehaviour
         currentPlayerTurn = (currentPlayerTurn + 1) % players.Length;
         UpdateCurrentPlayerUI();
         Debug.Log($"Turn ended. Next turn: Player {currentPlayerTurn + 1}");
-        
-        // Add logic here to re-enable interaction for the new current player's cards if needed
-        // For now, we assume cards remain interactable unless specifically disabled.
     }
     
     private void UpdateCurrentPlayerUI()
@@ -421,27 +411,94 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        if (revealedDeckCard != null)
+        {
+            Debug.Log("A card is revealed on the deck. Click one of your hand cards to swap, or the deck card might need specific action.");
+        }
+
         if (clickedCard.PlayerIndex != currentPlayerTurn)
         {
-            Debug.Log($"It's not Player {clickedCard.PlayerIndex + 1}'s turn! Current turn: Player {currentPlayerTurn + 1}");
+            Debug.Log($"It's not Player {clickedCard.PlayerIndex + 1}'s turn, or card does not belong to current player! Current turn: Player {currentPlayerTurn + 1}");
             return;
         }
 
-        // It's the correct player's turn, and they clicked their own card
         if (!clickedCard.IsFaceUp)
         {
             clickedCard.Flip();
             Debug.Log($"Player {currentPlayerTurn + 1} flipped card: {clickedCard.Data.cardName}");
-            
-            // Potentially add game logic based on the flipped card here
-            
-            // End the current player's turn after flipping a card
             NextTurn(); 
         }
         else
         {
-            // Optional: Handle clicking an already face-up card if needed
             Debug.Log("Card is already face up.");
         }
+    }
+
+    public bool CanSwapWithRevealedCard(Card handCard)
+    {
+        if (revealedDeckCard == null || gameState != GameState.PlayerTurn)
+        {
+            return false;
+        }
+        return handCard.PlayerIndex == currentPlayerTurn;
+    }
+
+    public void PerformSwap(Card playerHandCardToDeck)
+    {
+        if (!CanSwapWithRevealedCard(playerHandCardToDeck))
+        {
+            Debug.LogWarning("Swap conditions not met or invalid card for swap.");
+            return;
+        }
+
+        Player currentPlayer = players[currentPlayerTurn];
+        Card cardFromDeckToHand = this.revealedDeckCard;
+
+        Transform deckPanelTransform = cardFromDeckToHand.transform.parent; 
+        Transform playerHandContainer = currentPlayer.handContainer;
+
+        // 1. Update Player's cardsInHand list
+        int originalIndex = currentPlayer.cardsInHand.IndexOf(playerHandCardToDeck);
+
+        if (originalIndex != -1)
+        {
+            currentPlayer.cardsInHand.RemoveAt(originalIndex);
+            currentPlayer.cardsInHand.Insert(originalIndex, cardFromDeckToHand);
+        }
+        else
+        {
+            Debug.LogError($"Critical Error: Card {playerHandCardToDeck.Data.cardName} (Player: {playerHandCardToDeck.PlayerIndex}) was clicked for swap but not found in current player {currentPlayer.playerIndex}'s hand list. Aborting swap.");
+            // NOTE: If we abort here, the revealedDeckCard (cardFromDeckToHand) is effectively lost from play
+            // as it's not returned to deck or discard. This might need more robust error handling.
+            // For now, the turn won't end, and the revealedDeckCard remains. The player might need to take another action or end turn.
+            return; 
+        }
+        
+        // 2. Configure and move card from Hand to Deck Panel (playerHandCardToDeck)
+        playerHandCardToDeck.transform.SetParent(deckPanelTransform, false);
+        playerHandCardToDeck.transform.localPosition = Vector3.zero;
+        playerHandCardToDeck.transform.SetAsLastSibling(); // Ensure it's drawn on top
+        playerHandCardToDeck.SetPlayerIndex(-1); 
+        SetCardSize(playerHandCardToDeck, handCardSize); 
+        playerHandCardToDeck.SetFaceUp(); // Ensure the card moved to the deck panel is face up
+
+        // 3. Configure and move card from Deck Panel to Hand (cardFromDeckToHand)
+        cardFromDeckToHand.transform.SetParent(playerHandContainer, false);
+        cardFromDeckToHand.SetPlayerIndex(currentPlayerTurn); 
+        SetCardSize(cardFromDeckToHand, handCardSize); 
+        // Position will be set by Player's UpdateHandLayout
+
+        // 4. Update player's visual hand layout
+        currentPlayer.UpdateHandLayout();
+
+        // 5. Update the game state's `revealedDeckCard` reference
+        // The card that moved TO the deck panel is now the one "revealed" there for the next potential action (or cleanup on turn end)
+        this.revealedDeckCard = playerHandCardToDeck; 
+
+        Debug.Log($"Player {currentPlayerTurn + 1} swapped. Card from hand {playerHandCardToDeck.Data.cardName} moved to deck. Card from deck {cardFromDeckToHand.Data.cardName} moved to hand. New revealed deck card is {this.revealedDeckCard.Data.cardName}");
+
+        // 6. End turn
+        // NextTurn() will also handle clearing the new revealedDeckCard if the *next* player doesn't interact with it.
+        NextTurn();
     }
 }

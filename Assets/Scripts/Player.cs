@@ -89,6 +89,11 @@ public class Player : MonoBehaviour
         }
     }
 
+    public void UpdateHandLayout()
+    {
+        RepositionCards();
+    }
+
     public int CalculateScore()
     {
         int score = 0;
