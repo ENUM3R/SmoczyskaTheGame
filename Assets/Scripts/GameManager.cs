@@ -334,7 +334,7 @@ public class GameManager : MonoBehaviour
     {
         if (currentPlayerText != null)
         {
-            currentPlayerText.text = $"Player {currentPlayerTurn + 1}'s Turn";
+            currentPlayerText.text = $"Player {currentPlayerTurn + 1} Turn";
         }
     }
     
