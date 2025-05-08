@@ -476,11 +476,11 @@ public class GameManager : MonoBehaviour
         
         // 2. Configure and move card from Hand to Deck Panel (playerHandCardToDeck)
         playerHandCardToDeck.transform.SetParent(deckPanelTransform, false);
-        playerHandCardToDeck.transform.localPosition = Vector3.zero;
         playerHandCardToDeck.transform.SetAsLastSibling(); // Ensure it's drawn on top
         playerHandCardToDeck.SetPlayerIndex(-1); 
         SetCardSize(playerHandCardToDeck, handCardSize); 
         playerHandCardToDeck.SetFaceUp(); // Ensure the card moved to the deck panel is face up
+        playerHandCardToDeck.transform.localPosition = Vector3.zero; // Set position *after* all other visual updates
 
         // 3. Configure and move card from Deck Panel to Hand (cardFromDeckToHand)
         cardFromDeckToHand.transform.SetParent(playerHandContainer, false);
