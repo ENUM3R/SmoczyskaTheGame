@@ -134,7 +134,11 @@ public class GameManager : MonoBehaviour
             {
                 foreach (Transform child in discardPile)
                 {
-                    Destroy(child.gameObject);
+                    // Only destroy children that are cards
+                    if (child.GetComponent<Card>() != null)
+                    {
+                        Destroy(child.gameObject);
+                    }
                 }
             }
             
@@ -179,6 +183,7 @@ public class GameManager : MonoBehaviour
                     discardCard.SetFaceUp();
                     SetCardSize(discardCard, discardCardSize);
                     discardPileTopCards[i] = discardCard;
+                    discardCard.ConfigureForDiscardPile();
                 }
             }
         }
@@ -549,7 +554,7 @@ public class GameManager : MonoBehaviour
         SetCardSize(cardToDiscard, discardCardSize); 
         cardToDiscard.transform.localPosition = Vector3.zero; 
         cardToDiscard.transform.SetAsLastSibling(); // Place it on top
-        // cardToDiscard.SetPlayerIndex(-1); // Already set in PerformSwap
+        cardToDiscard.ConfigureForDiscardPile();
 
         if (discardPileTopCards != null && pileIndex < discardPileTopCards.Length) {
             discardPileTopCards[pileIndex] = cardToDiscard; // Update tracking if used

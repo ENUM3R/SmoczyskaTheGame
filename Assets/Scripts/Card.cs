@@ -141,10 +141,37 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void SetInteractable(bool interactable)
     {
+        // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) SetInteractable({interactable}): Called. Current alpha before change: {canvasGroup?.alpha}", gameObject);
         _isInteractable = interactable;
-        cardButton.interactable = interactable;
-        canvasGroup.blocksRaycasts = interactable;
-        canvasGroup.alpha = interactable ? 1f : 0.7f;
+        if (cardButton != null) cardButton.interactable = interactable;
+        if (canvasGroup != null)
+        {
+            canvasGroup.blocksRaycasts = interactable;
+            canvasGroup.alpha = interactable ? 1f : 0.7f;
+            // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) SetInteractable({interactable}): Alpha set to {canvasGroup.alpha}", gameObject);
+        }
+        // else
+        // {
+        //     Debug.LogError($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) SetInteractable({interactable}): canvasGroup is NULL!", gameObject);
+        // }
+    }
+
+    public void ConfigureForDiscardPile()
+    {
+        // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) ConfigureForDiscardPile: Called. Current alpha before change: {canvasGroup?.alpha}", gameObject);
+        _isInteractable = false;
+        if (cardButton != null) cardButton.interactable = false;
+
+        if (canvasGroup != null)
+        {
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.alpha = 1f; // Keep fully opaque
+            // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) ConfigureForDiscardPile: Alpha set to {canvasGroup.alpha}", gameObject);
+        }
+        // else
+        // {
+        //     Debug.LogError($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) ConfigureForDiscardPile: canvasGroup is NULL!", gameObject);
+        // }
     }
 
     private void UpdateAppearance()
