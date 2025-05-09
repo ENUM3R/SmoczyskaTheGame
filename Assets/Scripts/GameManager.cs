@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using TMPro; // Added for TextMeshPro support
 
 public enum GameState { Setup, PlayerTurn, GameEnd }
 
@@ -21,6 +22,9 @@ public class GameManager : MonoBehaviour
     public Transform[] discardPiles;
     public Text currentPlayerText;
     public Button endTurnButton;
+    
+    [Header("UI Score Displays")]
+    public TextMeshProUGUI[] playerScoreTexts;
     
     [Header("Card Size Settings")]
     public Vector2 handCardSize = new Vector2(100f, 150f);
@@ -325,8 +329,14 @@ public class GameManager : MonoBehaviour
             
         currentPlayerTurn = (currentPlayerTurn + 1) % players.Length;
         UpdateCurrentPlayerUI();
-        Debug.Log($"Turn ended. Next turn: Player {currentPlayerTurn + 1}");
-        UpdateCardInteractability(); // Update for the new turn
+        Debug.Log($"Player {currentPlayerTurn + 1}'s turn.");
+
+        // Display scores at the end of the previous player's turn (which is the start of the new turn for calculation purposes)
+        CalculateAndDisplayPlayerScores();
+
+        // Check for game end condition (e.g., all cards flipped)
+        CheckGameEndCondition(); 
+        UpdateCardInteractability();
     }
     
     private void UpdateCurrentPlayerUI()
@@ -363,41 +373,11 @@ public class GameManager : MonoBehaviour
     private void EndGame()
     {
         gameState = GameState.GameEnd;
-        
-        // Reveal all player cards
-        foreach (Player player in players)
-        {
-            player.RevealAllCards();
-        }
-        
-        // Calculate scores
-        int[] scores = new int[players.Length];
-        int minScore = int.MaxValue;
-        int winnerIndex = -1;
-        
-        for (int i = 0; i < players.Length; i++)
-        {
-            scores[i] = players[i].CalculateScore();
-            Debug.Log($"Player {i + 1} score: {scores[i]}");
-            
-            if (scores[i] < minScore)
-            {
-                minScore = scores[i];
-                winnerIndex = i;
-            }
-        }
-        
-        // Display winner
-        if (winnerIndex >= 0)
-        {
-            Debug.Log($"Player {winnerIndex + 1} wins with a score of {minScore}!");
-            if (currentPlayerText != null)
-            {
-                currentPlayerText.text = $"Player {winnerIndex + 1} wins!";
-            }
-        }
-        
-        // Hide end turn button, could show restart button instead
+        Debug.Log("Game Over!");
+        // Optionally, display final scores here too or instead of in NextTurn if preferred
+        CalculateAndDisplayPlayerScores(); 
+
+        // Disable end turn button and further interactions as game is over
         if (endTurnButton != null)
         {
             endTurnButton.gameObject.SetActive(false);
@@ -661,6 +641,50 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"Card {revealedDeckCard.Data.cardName} is now the revealed card.");
         UpdateCardInteractability();
+    }
+
+    private void CalculateAndDisplayPlayerScores()
+    {
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] == null)
+            {
+                Debug.LogWarning($"Player {i + 1} is null. Skipping score calculation.");
+                if (playerScoreTexts != null && i < playerScoreTexts.Length && playerScoreTexts[i] != null)
+                {
+                    playerScoreTexts[i].text = $"P{i+1} Score: N/A";
+                }
+                continue;
+            }
+
+            int playerScore = 0;
+            if (players[i].cardsInHand != null)
+            {
+                foreach (Card card in players[i].cardsInHand)
+                {
+                    if (card != null && card.Data != null)
+                    {
+                        if (card.IsFaceUp)
+                        {
+                            playerScore += card.Data.value;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"Player {i + 1} cardsInHand is null.");
+            }
+            
+            if (playerScoreTexts != null && i < playerScoreTexts.Length && playerScoreTexts[i] != null)
+            {
+                playerScoreTexts[i].text = $"P{i+1} Score: {playerScore}";
+            }
+            else
+            {
+                Debug.Log($"Player {i + 1} Score (UI Text not set): {playerScore}");
+            }
+        }
     }
 
     private void UpdateCardInteractability()
