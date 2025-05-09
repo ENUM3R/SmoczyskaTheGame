@@ -22,6 +22,8 @@ public class GameManager : MonoBehaviour
     public Transform[] discardPiles;
     public Text currentPlayerText;
     public Button endTurnButton;
+    public TextMeshProUGUI gameOverText; // Added for Game Over message
+    public GameObject gameOverOverlayPanel; // Added for screen dimming
     
     [Header("UI Score Displays")]
     public TextMeshProUGUI[] playerScoreTexts;
@@ -66,6 +68,16 @@ public class GameManager : MonoBehaviour
         {
             endTurnButton.onClick.AddListener(NextTurn);
             endTurnButton.gameObject.SetActive(false);  // Hide until game starts
+        }
+        
+        // Initially hide game over text and overlay
+        if (gameOverText != null)
+        {
+            gameOverText.gameObject.SetActive(false);
+        }
+        if (gameOverOverlayPanel != null)
+        {
+            gameOverOverlayPanel.SetActive(false);
         }
         
         // Initialize discard pile tracking
@@ -119,6 +131,16 @@ public class GameManager : MonoBehaviour
         // Setup the deck
         deck.InitializeDeck();
         deck.Shuffle();
+        
+        // Hide Game Over text and overlay on restart
+        if (gameOverText != null)
+        {
+            gameOverText.gameObject.SetActive(false);
+        }
+        if (gameOverOverlayPanel != null)
+        {
+            gameOverOverlayPanel.SetActive(false);
+        }
         
         // Clear any existing cards in player areas
         foreach (Transform hand in playerHands)
@@ -205,6 +227,9 @@ public class GameManager : MonoBehaviour
             endTurnButton.gameObject.SetActive(true);
         }
         
+        // Calculate and display initial scores
+        CalculateAndDisplayPlayerScores();
+
         Debug.Log($"Game initialized. Player {currentPlayerTurn + 1}'s turn.");
         UpdateCardInteractability(); // Call after game state is PlayerTurn
     }
@@ -374,7 +399,66 @@ public class GameManager : MonoBehaviour
     {
         gameState = GameState.GameEnd;
         Debug.Log("Game Over!");
-        // Optionally, display final scores here too or instead of in NextTurn if preferred
+
+        // Reveal all players' cards before calculating scores
+        if (players != null)
+        {
+            foreach (Player player in players)
+            {
+                if (player != null)
+                {
+                    player.RevealAllCards();
+                }
+            }
+        }
+
+        int winnerIndex = -1;
+        int minScore = int.MaxValue;
+
+        if (players != null)
+        {
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (players[i] == null || players[i].cardsInHand == null) continue;
+
+                int currentPlayerScore = 0;
+                foreach (Card card in players[i].cardsInHand)
+                {
+                    if (card != null && card.Data != null && card.IsFaceUp)
+                    {
+                        currentPlayerScore += card.Data.value;
+                    }
+                }
+
+                if (currentPlayerScore < minScore)
+                {
+                    minScore = currentPlayerScore;
+                    winnerIndex = i;
+                }
+                // Basic tie-breaking: first player to achieve the lowest score wins.
+                // More complex tie-breaking could be added here if needed.
+            }
+        }
+
+        // Display Game Over message and overlay
+        if (gameOverOverlayPanel != null)
+        {
+            gameOverOverlayPanel.SetActive(true);
+        }
+        if (gameOverText != null)
+        {
+            if (winnerIndex != -1)
+            {
+                gameOverText.text = $"Game Over!\nPlayer {winnerIndex + 1} won";
+            }
+            else
+            {
+                gameOverText.text = "Game Over!"; // Fallback if no winner determined
+            }
+            gameOverText.gameObject.SetActive(true);
+        }
+        
+        // Display final scores for all players
         CalculateAndDisplayPlayerScores(); 
 
         // Disable end turn button and further interactions as game is over
