@@ -741,32 +741,101 @@ public class GameManager : MonoBehaviour
                 continue;
             }
 
+            Player currentPlayer = players[i];
+            int currentPlayerIndex = i; // Player index (0-3)
             int playerScore = 0;
-            if (players[i].cardsInHand != null)
+
+            if (currentPlayer.cardsInHand == null)
             {
-                foreach (Card card in players[i].cardsInHand)
+                Debug.LogWarning($"Player {currentPlayerIndex + 1} cardsInHand is null. Skipping score calculation for this player.");
+                if (playerScoreTexts != null && currentPlayerIndex < playerScoreTexts.Length && playerScoreTexts[currentPlayerIndex] != null)
                 {
-                    if (card != null && card.Data != null)
+                    playerScoreTexts[currentPlayerIndex].text = $"P{currentPlayerIndex+1} Score: N/A";
+                }
+                continue;
+            }
+
+            List<Card> playerCardsInHand = currentPlayer.cardsInHand;
+            bool[] isZeroPointCard = new bool[playerCardsInHand.Count]; // Defaults to false
+
+            if (playerCardsInHand.Count == cardsPerPlayer && cardsPerPlayer == 6)
+            {
+                // Players 1 and 3 (indices 0 and 2) have a layout where cardsInHand[col] and cardsInHand[col+3] are visually vertical.
+                // Players 2 and 4 (indices 1 and 3) might have a layout where cardsInHand is effectively column-major filled into the visual 2x3 grid.
+                bool isAlternateLayout = (currentPlayerIndex == 1 || currentPlayerIndex == 3);
+
+                if (isAlternateLayout)
+                {
+                    // Assumed mapping for P2/P4 (indices 1, 3): Visual 2Rx3C grid, filled column by column from playerCardsInHand
+                    // Visual Col 0: playerCardsInHand[0] (top), playerCardsInHand[1] (bottom)
+                    // Visual Col 1: playerCardsInHand[2] (top), playerCardsInHand[3] (bottom)
+                    // Visual Col 2: playerCardsInHand[4] (top), playerCardsInHand[5] (bottom)
+                    for (int visualCol = 0; visualCol < 3; visualCol++)
                     {
-                        if (card.IsFaceUp)
+                        int topCardIndex = visualCol * 2;
+                        int bottomCardIndex = visualCol * 2 + 1;
+
+                        Card topCard = playerCardsInHand[topCardIndex];
+                        Card bottomCard = playerCardsInHand[bottomCardIndex];
+
+                        if (topCard != null && topCard.Data != null && topCard.IsFaceUp &&
+                            bottomCard != null && bottomCard.Data != null && bottomCard.IsFaceUp)
                         {
-                            playerScore += card.Data.value;
+                            if (topCard.Data.cardName == bottomCard.Data.cardName)
+                            {
+                                isZeroPointCard[topCardIndex] = true;
+                                isZeroPointCard[bottomCardIndex] = true;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Original logic for P1/P3 (indices 0, 2): cardsInHand is row-major for the visual 2Rx3C grid
+                    // Visual Col 0: playerCardsInHand[0] (top), playerCardsInHand[3] (bottom)
+                    // Visual Col 1: playerCardsInHand[1] (top), playerCardsInHand[4] (bottom)
+                    // Visual Col 2: playerCardsInHand[2] (top), playerCardsInHand[5] (bottom)
+                    for (int col = 0; col < 3; col++) // Iterate through visual columns 0, 1, 2
+                    {
+                        Card topCard = playerCardsInHand[col];       // Top card in the visual column
+                        Card bottomCard = playerCardsInHand[col + 3]; // Bottom card in the visual column
+
+                        if (topCard != null && topCard.Data != null && topCard.IsFaceUp &&
+                            bottomCard != null && bottomCard.Data != null && bottomCard.IsFaceUp)
+                        {
+                            if (topCard.Data.cardName == bottomCard.Data.cardName)
+                            {
+                                isZeroPointCard[col] = true;
+                                isZeroPointCard[col + 3] = true;
+                            }
                         }
                     }
                 }
             }
-            else
+            else if (cardsPerPlayer == 6 && playerCardsInHand.Count != cardsPerPlayer)
             {
-                Debug.LogWarning($"Player {i + 1} cardsInHand is null.");
+                Debug.LogWarning($"Player {currentPlayerIndex + 1} hand count ({playerCardsInHand.Count}) does not match expected cardsPerPlayer ({cardsPerPlayer}). Vertical pair rule skipped; standard scoring will apply.");
+            }
+
+            for (int cardIdx = 0; cardIdx < playerCardsInHand.Count; cardIdx++)
+            {
+                Card card = playerCardsInHand[cardIdx];
+                if (card != null && card.Data != null && card.IsFaceUp)
+                {
+                    if (!isZeroPointCard[cardIdx])
+                    {
+                        playerScore += card.Data.value;
+                    }
+                }
             }
             
-            if (playerScoreTexts != null && i < playerScoreTexts.Length && playerScoreTexts[i] != null)
+            if (playerScoreTexts != null && currentPlayerIndex < playerScoreTexts.Length && playerScoreTexts[currentPlayerIndex] != null)
             {
-                playerScoreTexts[i].text = $"P{i+1} Score: {playerScore}";
+                playerScoreTexts[currentPlayerIndex].text = $"P{currentPlayerIndex+1} Score: {playerScore}";
             }
             else
             {
-                Debug.Log($"Player {i + 1} Score (UI Text not set): {playerScore}");
+                Debug.Log($"Player {currentPlayerIndex + 1} Score (UI Text not set): {playerScore}");
             }
         }
     }
